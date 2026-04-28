@@ -12,15 +12,19 @@
 
 (defmacro cetakln (&optional (control-str "") &rest fmt-args)
   "Print formatted output to standard output followed by a newline."
-  `(format t (concatenate 'string ,control-str "~%") ,@fmt-args))
+  `(format t ,(concatenate 'string control-str "~%") ,@fmt-args))
 
 (defun dd (symbol)
   "Describe the given `SYMBOL`."
-  (describe    symbol))
+  (describe symbol))
 
 (defun em (macro)
   "Expand the given `MACRO` form."
   (macroexpand macro))
+
+(defun em1 (macro)
+  "Expand 1 the given `MACRO' form"
+  (macroexpand-1 macro))
 
 (defun foo (x)
   "Print 'BIG if `X` is greater than 10."
@@ -52,3 +56,32 @@
 
 (do-primes (p 0 19)
   (cetak "~d " p))
+
+(defmacro with-gensyms ((&rest names) &body body)
+  `(let ,(loop for name in names collect `(,name (gensym)))
+     ,@body))
+
+(defmacro do-primes-1 ((var start end) &body body)
+   "Iterate over primes from `START` to `END`, binding each to `VAR` and executing `BODY`."
+   (with-gensyms (end-val)
+      `(do ((,var (next-prime ,start) (next-prime (1+ ,var))))
+           (,end-val ,end)
+          ((> ,var ,end-val))
+        ,@body)))
+
+(defmacro once-only ((&rest names) &body body)
+  (let ((gensyms (loop
+                   for n in names
+                   collect (gensym))))
+    `(let (,@(loop
+               for g in gensyms
+               collect `(,g (gensym))))
+       `(let (,,@(loop
+                   for g in gensyms
+                   for n in names
+                   collect ``(,,g ,,n)))
+          ,(let (,@(loop
+                     for n in names
+                     for g in gensyms
+                     collect `(,n ,g)))
+             ,@body)))))
